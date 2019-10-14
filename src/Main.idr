@@ -3,35 +3,14 @@ import Control.Monad.State
 import Debug.Trace
 
 %default partial
-
-eval : Monad m => String -> StateT (List Integer) m (Maybe Integer)
-eval src = eval' $ words src
-  where 
-    eval' : Monad m => List String -> StateT (List Integer) m (Maybe Integer)
-    eval' ("+"::srcs) = do
-        stack <- get
-        case stack of 
-          arg1::arg0::rest => put (arg0 + arg1 :: rest) *> eval' srcs
-          _                => pure Nothing
-    
-    eval' (src::srcs) = case (parsePositive src) of
-      Just num => do
-        modify (\s => the (List Integer) (num::s))
-        eval' srcs
-      Nothing => do
-        stack <- get
-        case (src, stack) of
-          ("-" , arg1::arg0::rest) => put (arg0 - arg1 :: rest)     *> eval' srcs
-          ("*" , arg1::arg0::rest) => put (arg0 * arg1 :: rest)     *> eval' srcs
-          ("/" , arg1::arg0::rest) => put (arg0 `div` arg1 :: rest) *> eval' srcs
-          ("%" , arg1::arg0::rest) => put (arg0 `mod` arg1 :: rest) *> eval' srcs
-          _                        => pure Nothing
-    eval' [] = do 
-      stack <- get
-      case stack of
-        [num] => pure $ Just num
-        _     => pure Nothing
-
+              
+main : IO ()
+main = do
+  ("run"::srcs) <- getArgs
+    | [_, "repl"] => repl
+    | _           => putStrLn "wrong"
+  printLn ((\src => evalState (eval src) []) <$> srcs)
+  
 repl : IO ()
 repl = runStateT loop [] *> pure ()
   where
@@ -42,11 +21,32 @@ repl = runStateT loop [] *> pure ()
       stack <- get
       lift $ printLn stack
       loop
-              
-main : IO ()
-main = do
-  (_::args) <- getArgs
-  case args of
-    ["repl"] => repl
-    "run"::srcs => printLn ((\src => evalState (eval src) []) <$> srcs)
-    _ => putStrLn "wrong"
+
+eval : Monad m => String -> StateT (List Integer) m (Maybe Integer)
+eval src = eval' $ words src
+  where 
+    eval' : Monad m => List String -> StateT (List Integer) m (Maybe Integer)
+    eval' ("+"::srcs) = do
+        (arg1::arg0::rest) <- get
+          | _ => pure Nothing
+        put (arg0 + arg1 :: rest) *> eval' srcs
+    
+    eval' (src::srcs) = case (parsePositive src) of
+      Just num => do
+        modify (\s => the (List Integer) (num::s))
+        eval' srcs
+
+      Nothing => do
+        (arg1::arg0::rest) <- get
+          | _ => pure Nothing
+        case src of
+          "-" => put (arg0 - arg1 :: rest)     *> eval' srcs
+          "*" => put (arg0 * arg1 :: rest)     *> eval' srcs
+          "/" => put (arg0 `div` arg1 :: rest) *> eval' srcs
+          "%" => put (arg0 `mod` arg1 :: rest) *> eval' srcs
+          _   => pure Nothing
+
+    eval' [] = do 
+      [num] <- get
+        | _ => pure Nothing
+      pure $ Just num
