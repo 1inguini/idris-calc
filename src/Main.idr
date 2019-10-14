@@ -1,34 +1,31 @@
 import Data.String
 import Control.Monad.State
 
-eval : String -> Maybe Integer
-eval src = eval' [] $ words src
+eval : String -> State (List Integer) (Maybe Integer)
+eval src = eval' $ words src
   where 
-    eval' : List Integer -> List String -> Maybe Integer
-    eval' (arg0::arg1::stack) ("+"::src) = 
-      eval' (arg1 + arg0 ::　stack) src
-    eval' (arg0::arg1::stack) ("*"::src) = 
-      eval' (arg1 * arg0　::　stack) src
-    eval' (arg0::arg1::stack) ("-"::src) = 
-      eval' (arg1 - arg0　::　stack) src
-    eval' (arg0::arg1::stack) ("/"::src) = 
-      eval' (arg1 `div` arg0　::　stack) src
-    eval' (arg0::arg1::stack) ("%"::src) = 
-      eval' (arg1 `mod` arg0　::　stack) src
-    eval' stack (numSrc::src) = do 
-      num <- parseInteger numSrc
-      eval' (num::stack) src
-    eval' (num::stack) [] = pure num
-    eval' [] [] = Nothing
-
--- loop : List String -> IO ()
--- loop (arg0::"+"::arg1::rest) = do
---   printLn $ (+) <$> parseInteger arg0 <*> parseInteger arg1
---   loop rest
--- loop a = printLn a
-
+    eval' : List String -> State (List Integer) (Maybe Integer)
+    eval' (src::srcs) = case (parsePositive src) of
+      Just num => do
+        modify (\s => the (List Integer) (num::s))
+        eval' srcs
+      Nothing => do
+        stack <- get
+        case (src, stack) of 
+          ("+" , arg1::arg0::rest) => put (arg0 + arg1 :: rest)     *> eval' srcs
+          ("-" , arg1::arg0::rest) => put (arg0 - arg1 :: rest)     *> eval' srcs
+          ("*" , arg1::arg0::rest) => put (arg0 * arg1 :: rest)     *> eval' srcs
+          ("/" , arg1::arg0::rest) => put (arg0 `div` arg1 :: rest) *> eval' srcs
+          ("%" , arg1::arg0::rest) => put (arg0 `mod` arg1 :: rest) *> eval' srcs
+          _                        => pure Nothing
+    eval' [] = do 
+      stack <- get
+      case stack of
+        [num] => pure $ Just num
+        _     => pure Nothing
+        
 main : IO ()
 main = do
   args <- getArgs
   case args of
-    _::srcs => printLn (eval <$> srcs)
+    _::srcs => printLn ((\src => evalState (eval src) []) <$> srcs)
