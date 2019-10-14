@@ -1,0 +1,4 @@
+[[packages]]
+id = 'linguini/calc@dir+/home/linguini/Desktop/idris/calc'
+version = '0.1.0'
+dependencies = []

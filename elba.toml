@@ -1,0 +1,12 @@
+[package]
+name = "linguini/calc"
+version = "0.1.0"
+authors = []
+
+[dependencies]
+
+[[targets.bin]]
+path = "src"
+name = "calc"
+main = "Main"
+
