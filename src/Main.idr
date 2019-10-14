@@ -11,6 +11,10 @@ eval src = eval' [] $ words src
       eval' (arg1 * arg0　::　stack) src
     eval' (arg0::arg1::stack) ("-"::src) = 
       eval' (arg1 - arg0　::　stack) src
+    eval' (arg0::arg1::stack) ("/"::src) = 
+      eval' (arg1 `div` arg0　::　stack) src
+    eval' (arg0::arg1::stack) ("%"::src) = 
+      eval' (arg1 `mod` arg0　::　stack) src
     eval' stack (numSrc::src) = do 
       num <- parseInteger numSrc
       eval' (num::stack) src
@@ -23,10 +27,8 @@ eval src = eval' [] $ words src
 --   loop rest
 -- loop a = printLn a
 
-partial
 main : IO ()
 main = do
   args <- getArgs
   case args of
     _::srcs => printLn (eval <$> srcs)
-    _ => putStrLn "no input"
